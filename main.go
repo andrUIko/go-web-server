@@ -14,22 +14,6 @@ type GeoResponse struct {
 	Results []LatLong `json:"results"`
 }
 
-// func main() {
-//   latLong, err := getLatLong("Lviv")
-//   if err != nil {
-//     log.Fatalf("Failed to get latitude and longitude: %s", err)
-//   }
-//   fmt.Printf("Latitude: %f, Longitude: %f\n", latLong.Latitude, latLong.Longitude)
-
-//   weather, err := getWeather(*latLong)
-
-//   if err != nil {
-//     log.Fatalf("Failed to get weather: %s", err)
-//   }
-
-//   fmt.Printf("Weather: %s\n", weather)
-// }
-
 func generateResponse(city string, c *gin.Context) {
 	latLong, err := getLatLong(city)
 
