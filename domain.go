@@ -9,7 +9,7 @@ import (
 	"net/url"
 )
 
-func getLatLong(city string) (*LatLong, error) {
+func fetchLatLong(city string) (*LatLong, error) {
 	endpoint := fmt.Sprintf("https://geocoding-api.open-meteo.com/v1/search?name=%s&count=1&language=en&format=json", url.QueryEscape(city))
 	resp, err := http.Get(endpoint)
 	if err != nil {
