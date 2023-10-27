@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 func fetchLatLong(city string) (*LatLong, error) {
@@ -43,4 +44,28 @@ func getWeather(latLong LatLong) (string, error) {
 	}
 
 	return string(body), nil
+}
+
+func extractWeatherData(city string, rawWeather string) (WeatherDisplay, error) {
+	var weatherResponse WeatherResponse
+	if err := json.Unmarshal([]byte(rawWeather), &weatherResponse); err != nil {
+		return WeatherDisplay{}, err
+	}
+
+	var forecasts []Forecast
+	for i, t := range weatherResponse.Hourly.Time {
+		data, err := time.Parse("2006-01-02T15:04", t)
+		if err != nil {
+			return WeatherDisplay{}, err
+		}
+		forecast := Forecast{
+			Date:        data.Format("Mon 15:04"),
+			Temperature: fmt.Sprintf("%.1f°C", weatherResponse.Hourly.Temperature2m[i]),
+		}
+		forecasts = append(forecasts, forecast)
+	}
+	return WeatherDisplay{
+		City:      city,
+		Forecasts: forecasts,
+	}, nil
 }
