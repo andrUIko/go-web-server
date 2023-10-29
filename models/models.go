@@ -1,4 +1,4 @@
-package main
+package models
 
 type LatLong struct {
 	Latitude  float64 `json:"latitude"`
