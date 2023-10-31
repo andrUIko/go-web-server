@@ -1,18 +1,17 @@
 package domain
 
 import (
-	sql "database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	queries "github.com/user/goforecast/db"
+	database "github.com/user/goforecast/db"
 	"github.com/user/goforecast/models"
 	"github.com/user/goforecast/services"
 )
 
-func GetLatLong(db *sql.DB, name string) (*models.LatLong, error) {
-	if latLong, err := queries.GetLatLong(db, name); err == nil {
+func GetLatLong(dbClient database.DBPool, name string) (*models.LatLong, error) {
+	if latLong, err := dbClient.GetLatLong(name); err == nil {
 		return latLong, nil
 	}
 
@@ -21,7 +20,7 @@ func GetLatLong(db *sql.DB, name string) (*models.LatLong, error) {
 		return nil, err
 	}
 
-	err = queries.InsertCity(db, name, *latLong)
+	err = dbClient.InsertCity(name, latLong)
 	if err != nil {
 		return nil, err
 	}

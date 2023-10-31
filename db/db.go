@@ -2,12 +2,35 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
+	"os"
+
 	"github.com/user/goforecast/models"
 )
 
-func GetLastCities(db *sql.DB) ([]string, error) {
+type DBClient struct {
+	DB *sql.DB
+}
+
+type DBPool interface {
+	GetLastCities() ([]string, error)
+	InsertCity(name string, latLong *models.LatLong) error
+	GetLatLong(name string) (*models.LatLong, error)
+}
+
+func CreateDBClient(url string) DBPool {
+	db, err := sql.Open("libsql", url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to open db %s: %s", url, err)
+		os.Exit(1)
+	}
+	var dbClient DBPool = &DBClient{db}
+	return dbClient
+}
+
+func (c *DBClient) GetLastCities() ([]string, error) {
 	var cities []string
-	rows, err := db.Query("SELECT name FROM cities ORDER BY id DESC LIMIT 10")
+	rows, err := c.DB.Query("SELECT name FROM cities ORDER BY id DESC LIMIT 10")
 	if err == nil {
 		var name string
 		for rows.Next() {
@@ -20,14 +43,14 @@ func GetLastCities(db *sql.DB) ([]string, error) {
 	return cities, nil
 }
 
-func InsertCity(db *sql.DB, name string, latLong models.LatLong) error {
-	_, err := db.Exec("INSERT INTO cities (name, lat, long) VALUES (?, ?, ?)", name, latLong.Latitude, latLong.Longitude)
+func (c *DBClient) InsertCity(name string, latLong *models.LatLong) error {
+	_, err := c.DB.Exec("INSERT INTO cities (name, lat, long) VALUES (?, ?, ?)", name, latLong.Latitude, latLong.Longitude)
 	return err
 }
 
-func GetLatLong(db *sql.DB, name string) (*models.LatLong, error) {
-	var latLong *models.LatLong = new(models.LatLong)
-	rows, err := db.Query("SELECT lat, long FROM cities WHERE name = ?", name)
+func (c *DBClient) GetLatLong(name string) (*models.LatLong, error) {
+	var latLong = new(models.LatLong)
+	rows, err := c.DB.Query("SELECT lat, long FROM cities WHERE name = ?", name)
 	if err != nil {
 		return nil, err
 	}

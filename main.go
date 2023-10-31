@@ -1,38 +1,25 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	"database/sql"
-
 	"github.com/gin-gonic/gin"
 	dotenv "github.com/joho/godotenv"
 	_ "github.com/libsql/libsql-client-go/libsql"
-	queries "github.com/user/goforecast/db"
+	database "github.com/user/goforecast/db"
 	"github.com/user/goforecast/domain"
 	"github.com/user/goforecast/services"
 )
 
 func main() {
-
-	var (
-		err   = dotenv.Load()
-		dbUrl = "libsql://" + os.Getenv("DATABASE_NAME") + ".turso.io?authToken=" + os.Getenv("DATABASE_ACCESS_TOKEN")
-	)
-
-	if err != nil {
+	if err := dotenv.Load(); err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	db, err := sql.Open("libsql", dbUrl)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to open db %s: %s", dbUrl, err)
-		os.Exit(1)
-	}
+	dbUrl := "libsql://" + os.Getenv("DATABASE_NAME") + ".turso.io?authToken=" + os.Getenv("DATABASE_ACCESS_TOKEN")
+	dbClient := database.CreateDBClient(dbUrl)
 
 	r := gin.Default()
 
@@ -40,7 +27,7 @@ func main() {
 
 	r.GET("/weather", func(c *gin.Context) {
 		city := c.Query("city")
-		latLong, err := domain.GetLatLong(db, city)
+		latLong, err := domain.GetLatLong(dbClient, city)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -61,7 +48,7 @@ func main() {
 	r.GET("/stats", gin.BasicAuth(gin.Accounts{
 		os.Getenv("AUTH_LOGIN"): os.Getenv("AUTH_PASSWORD"),
 	}), func(c *gin.Context) {
-		cities, err := queries.GetLastCities(db)
+		cities, err := dbClient.GetLastCities()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
