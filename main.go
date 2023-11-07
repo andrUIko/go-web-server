@@ -2,15 +2,13 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	dotenv "github.com/joho/godotenv"
 	_ "github.com/libsql/libsql-client-go/libsql"
+	"github.com/user/goforecast/controllers"
 	database "github.com/user/goforecast/db"
-	"github.com/user/goforecast/domain"
-	"github.com/user/goforecast/services"
 )
 
 func main() {
@@ -18,47 +16,32 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	dbUrl := "libsql://" + os.Getenv("DATABASE_NAME") + ".turso.io?authToken=" + os.Getenv("DATABASE_ACCESS_TOKEN")
+	var (
+		DATABASE_NAME         = os.Getenv("DATABASE_NAME")
+		DATABASE_ACCESS_TOKEN = os.Getenv("DATABASE_ACCESS_TOKEN")
+		AUTH_LOGIN            = os.Getenv("AUTH_LOGIN")
+		AUTH_PASSWORD         = os.Getenv("AUTH_PASSWORD")
+	)
+
+	dbUrl := "libsql://" + DATABASE_NAME + ".turso.io?authToken=" + DATABASE_ACCESS_TOKEN
 	dbClient := database.CreateDBClient(dbUrl)
 
 	r := gin.Default()
 
+	r.Use(func(ctx *gin.Context) {
+		ctx.Keys = make(map[string]interface{})
+		ctx.Keys["DB"] = dbClient
+	})
+
 	r.LoadHTMLGlob("views/*")
 
-	r.GET("/weather", func(c *gin.Context) {
-		city := c.Query("city")
-		latLong, err := domain.GetLatLong(dbClient, city)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		weather, err := services.GetWeather(*latLong)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		weatherDisplay, err := domain.ExtractWeatherData(city, weather)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.HTML(http.StatusOK, "weather.html", weatherDisplay)
-	})
+	r.GET("/weather", controllers.GetWeather)
 
 	r.GET("/stats", gin.BasicAuth(gin.Accounts{
-		os.Getenv("AUTH_LOGIN"): os.Getenv("AUTH_PASSWORD"),
-	}), func(c *gin.Context) {
-		cities, err := dbClient.GetLastCities()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.HTML(http.StatusOK, "stats.html", cities)
-	})
+		AUTH_LOGIN: AUTH_PASSWORD,
+	}), controllers.GetStats)
 
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
-	})
+	r.GET("/", controllers.GetIndex)
 
 	r.Run()
 }
