@@ -27,7 +27,7 @@ func main() {
 	dbClient := database.CreateDBClient(dbUrl)
 
 	r := gin.Default()
-
+	r.Static("/assets", "./assets")
 	r.Use(func(ctx *gin.Context) {
 		ctx.Keys = make(map[string]interface{})
 		ctx.Keys["DB"] = dbClient

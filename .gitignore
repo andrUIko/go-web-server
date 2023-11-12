@@ -1,3 +1,5 @@
 .env
 dist/*
 !dist/.gitkeep
+node_modules
+assets/css/*
